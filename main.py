@@ -44,16 +44,21 @@ def detect_object(image_bytes):
 
 @app.post("/api/calibrate")
 async def calibrate(file: UploadFile = File(...)):
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Invalid file type")
+    try:
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Invalid file type")
 
-    image_bytes = await file.read()
-    image_np, bounding_box = detect_object(image_bytes)
-    if bounding_box:
-        x, y, w, h = bounding_box
-        focal_length = calculate_focal_length(KNOWN_DISTANCE, BOX_WIDTH, w)
-        return {"success": True, "focal_length": focal_length}
-    return {"success": False, "message": "Object not detected"}
+        image_bytes = await file.read()
+        image_np, bounding_box = detect_object(image_bytes)
+        if bounding_box:
+            x, y, w, h = bounding_box
+            focal_length = calculate_focal_length(KNOWN_DISTANCE, BOX_WIDTH, w)
+            return {"success": True, "focal_length": focal_length}
+        return {"success": False, "message": "Object not detected"}
+    except Exception as e:
+        print(f"Error in calibrate: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @app.post("/api/measure")
 async def measure(
