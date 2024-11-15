@@ -67,10 +67,8 @@ async def calibrate(file: UploadFile = File(...)):
 
 @app.post("/api/measure")
 async def measure(file: UploadFile = File(...), focal_length: float = Form(...)):
-    # Log the received data for debugging
-    print("Received focal_length:", focal_length)
-    print("Received file:", file)
-    print("Received file content type:", file.content_type)
+    if focal_length is None:
+        raise HTTPException(status_code=400, detail="Missing focal_length")
 
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Invalid file type")
