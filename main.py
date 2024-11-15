@@ -66,9 +66,10 @@ async def calibrate(file: UploadFile = File(...)):
 
 
 @app.post("/api/measure")
-async def measure(
-    file: UploadFile = File(...), focal_length: float = Form(...)
-):
+async def measure(file: UploadFile = File(...), focal_length: float = Form(...)):
+    print("Received focal_length:", focal_length)
+    print("Received file content type:", file.content_type)
+
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Invalid file type")
 
@@ -79,3 +80,4 @@ async def measure(
         distance = estimate_distance(focal_length, BOX_WIDTH, w)
         return {"success": True, "distance": distance}
     return {"success": False, "message": "Object not detected"}
+
