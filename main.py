@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import io
@@ -76,26 +76,32 @@ async def calibrate(file: UploadFile = File(...)):
         return {"success": False, "message": "Object not detected"}
 
 @app.post("/api/measure")
-async def measure(file: UploadFile = File(...), focal_length: float = 0):
-    # Read the uploaded file
+async def measure(file: UploadFile = File(...), focal_length: float = Form(...)):
+    print("Received focal_length:", focal_length)
+    print("Received file:", file.filename)
+    print("Received file content type:", file.content_type)
+    
+    # Check if focal_length is None
+    if focal_length is None:
+        raise HTTPException(status_code=400, detail="Missing focal_length")
+
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
     image_bytes = await file.read()
-    np_img = np.frombuffer(image_bytes, np.uint8)
-    image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+    print("Image size (bytes):", len(image_bytes))
+    
+    image_np, bounding_box = detect_object(image_bytes)
+    if bounding_box:
+        x, y, w, h = bounding_box
+        print(f"Detected object at x:{x}, y:{y}, width:{w}, height:{h}")
+        distance = estimate_distance(focal_length, BOX_WIDTH, w)
+        print(f"Estimated distance: {distance}")
+        return {"success": True, "distance": distance}
+    
+    return {"success": False, "message": "Object not detected"}
 
-    if image is None:
-        raise HTTPException(status_code=400, detail="Invalid image file")
 
-    # Detect the object and measure distance
-    processed_image, distance = detect_object(image, focal_length, BOX_WIDTH)
-    if processed_image is not None:
-        _, img_encoded = cv2.imencode('.jpg', processed_image)
-        return {
-            "success": True,
-            "distance": distance,
-            "image": img_encoded.tobytes()
-        }
-    else:
-        return {"success": False, "message": "Object not detected"}
 
 # Run the server
 if __name__ == "__main__":
