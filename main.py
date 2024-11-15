@@ -67,6 +67,11 @@ async def calibrate(file: UploadFile = File(...)):
 
 @app.post("/api/measure")
 async def measure(file: UploadFile = File(...), focal_length: float = Form(...)):
+    print("Received focal_length:", focal_length)
+    print("Received file:", file.filename)
+    print("Received file content type:", file.content_type)
+    
+    # Check if focal_length is None
     if focal_length is None:
         raise HTTPException(status_code=400, detail="Missing focal_length")
 
@@ -74,10 +79,15 @@ async def measure(file: UploadFile = File(...), focal_length: float = Form(...))
         raise HTTPException(status_code=400, detail="Invalid file type")
 
     image_bytes = await file.read()
+    print("Image size (bytes):", len(image_bytes))
+    
     image_np, bounding_box = detect_object(image_bytes)
     if bounding_box:
         x, y, w, h = bounding_box
+        print(f"Detected object at x:{x}, y:{y}, width:{w}, height:{h}")
         distance = estimate_distance(focal_length, BOX_WIDTH, w)
+        print(f"Estimated distance: {distance}")
         return {"success": True, "distance": distance}
+    
     return {"success": False, "message": "Object not detected"}
 
